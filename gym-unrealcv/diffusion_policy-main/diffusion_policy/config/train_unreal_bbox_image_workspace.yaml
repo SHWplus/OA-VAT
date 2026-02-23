@@ -1,0 +1,137 @@
+defaults:  # 配置继承与组合（Hydra defaults 列表）
+  - _self_  # 先应用本文件
+  - task: unreal_bbox_image_abs  # 绑定任务配置（数据集、zarr 路径、shape_meta 等）
+
+name: train_unreal_bbox_image  # 运行名称前缀
+_target_: diffusion_policy.workspace.train_diffusion_unet_image_workspace.TrainDiffusionUnetImageWorkspace  # 工作区（训练入口）类
+
+task_name: ${task.name}  # 任务名（用于日志/命名）
+shape_meta: ${task.shape_meta}  # 观测/动作张量形状描述（来自 task 配置）
+exp_name: "default"  # 实验标签（附加在名称/标签上）
+
+horizon: 8  # 序列总长度 T（动作/条件的时间维）
+n_obs_steps: 1  # 用作条件的观测步数 To（单帧条件设为 1）
+n_action_steps: 8  # 需要输出的动作步数（轨迹长度）
+n_latency_steps: 0  # 条件到动作的时间延迟偏移
+dataset_obs_steps: ${n_obs_steps}  # 传递给数据集用于采样/前置 padding 的观测步数
+past_action_visible: False  # 是否把历史动作作为条件（当前任务一般为 False）
+keypoint_visible_rate: 1.0  # 关键点可见率（其他任务用，当前可忽略）
+obs_as_global_cond: True  # 观测编码为全局条件（而非逐步拼接）
+
+policy:
+  _target_: diffusion_policy.policy.diffusion_unet_image_policy.DiffusionUnetImagePolicy  # 策略：图像条件的 1D 扩散模型
+
+  shape_meta: ${shape_meta}  # 同上，定义 obs/action 维度
+  noise_scheduler:  # 扩散噪声调度器（DDPM 超参）
+    _target_: diffusers.schedulers.scheduling_ddpm.DDPMScheduler
+    num_train_timesteps: 100  # 噪声时间步（训练/采样用，越大越慢，一般 100~1000）
+    beta_start: 0.0001  # beta 起始值
+    beta_end: 0.02  # beta 终止值
+    beta_schedule: squaredcos_cap_v2  # beta 调度曲线
+    variance_type: fixed_small  # 预测方差类型
+    clip_sample: True  # 采样时裁剪范围，避免数值发散
+    prediction_type: epsilon  # 模型预测的目标：噪声残差（常用）
+
+  obs_encoder:  # 多模态观测编码器（图像/低维量融合）
+    _target_: diffusion_policy.model.vision.multi_image_obs_encoder.MultiImageObsEncoder
+    shape_meta: ${shape_meta}  # 指定各观测键的形状/类型
+    rgb_model:
+      _target_: diffusion_policy.model.vision.model_getter.get_resnet
+      name: resnet18  # 视觉骨干（可改 resnet34/resnet50 等）
+      weights: null  # 预训练权重（null 表示无；可设 'IMAGENET1K_V1' 提升收敛）
+    resize_shape: null  # 可选重采样到 (H,W)，留空表示按输入尺寸
+    crop_shape: null  # 可选中心/随机裁剪到 (H,W)
+    random_crop: False  # 若启用裁剪，是否随机裁剪
+    use_group_norm: True  # 用 GroupNorm 替换 BatchNorm（小 batch 更稳定）
+    share_rgb_model: False  # 多路 RGB 是否共享同一骨干
+    imagenet_norm: True  # 是否使用 ImageNet 归一化（输入应在 [0,1]）
+
+  horizon: ${horizon}  # 模型内部使用的序列长度
+  n_action_steps: ${eval:'${n_action_steps}+${n_latency_steps}'}  # 实际输出动作步数（含延迟）
+  n_obs_steps: ${n_obs_steps}  # 条件帧数（与上保持一致）
+  num_inference_steps: 100  # 推理采样步数（越大越稳，越慢）
+  obs_as_global_cond: ${obs_as_global_cond}  # 使用全局条件（拼接 To 帧特征）
+  diffusion_step_embed_dim: 128  # 扩散时间步嵌入维度
+  down_dims: [512, 1024, 2048]  # 1D U-Net 通道宽度（可减小以省显存）
+  kernel_size: 5  # 1D 卷积核大小
+  n_groups: 8  # GroupNorm 组数
+  cond_predict_scale: True  # 条件下是否预测尺度项
+
+ema:  # 指数滑动平均（稳定评估/采样）
+  _target_: diffusion_policy.model.diffusion.ema_model.EMAModel
+  update_after_step: 0  # 多少步后开始更新（0 表示立即）
+  inv_gamma: 1.0  # EMA 衰减曲线形状
+  power: 0.75  # EMA 衰减幂次
+  min_value: 0.0  # EMA 最小系数
+  max_value: 0.9999  # EMA 最大系数
+
+dataloader:  # 训练数据加载器
+  batch_size: 64  # 批大小（受显存限制，OOM 可降到 32）
+  num_workers: 4  # 读取并行度
+  shuffle: True  # 是否打乱训练数据
+  pin_memory: True  # 固定内存，加速 H2D 拷贝
+  persistent_workers: False  # 工作进程是否常驻
+
+val_dataloader:  # 验证数据加载器
+  batch_size: 64  # 验证批大小
+  num_workers: 4
+  shuffle: False  # 验证集不打乱
+  pin_memory: True
+  persistent_workers: False
+
+optimizer:  # 优化器参数
+  _target_: torch.optim.AdamW
+  lr: 1.0e-4  # 学习率
+  betas: [0.95, 0.999]  # 动量参数（适合扩散）
+  eps: 1.0e-8  # 数值稳定项
+  weight_decay: 1.0e-6  # 权重衰减（轻微正则）
+
+training:  # 训练控制
+  device: "cuda:0"  # 训练设备
+  seed: 42  # 随机种子
+  debug: False  # 调试模式（缩短训练/验证步骤）
+  resume: True  # 自动从最近检查点恢复
+  lr_scheduler: cosine  # 学习率调度器（余弦退火）
+  lr_warmup_steps: 500  # 学习率预热步数
+  num_epochs: 100  # 训练轮数
+  gradient_accumulate_every: 1  # 梯度累积步数（>1 可在小显存模拟大 batch）
+  use_ema: True  # 使用 EMA 模型用于评估/采样
+  freeze_encoder: False  # 是否冻结视觉编码器
+  rollout_every: 50  # 每多少个 epoch 执行一次环境评估（需非 Noop runner）
+  checkpoint_every: 10  # 保存检查点的间隔（epoch）
+  val_every: 1  # 验证频率（epoch）
+  sample_every: 5  # 在训练 batch 上做一次动作采样评估的频率
+  max_train_steps: null  # 每个 epoch 的最大训练步数（null 表示不限）
+  max_val_steps: null  # 每个 epoch 的最大验证步数
+  tqdm_interval_sec: 1.0  # 进度条刷新时间间隔（秒）
+
+logging:  # 日志与可视化（W&B）
+  project: diffusion_policy_unreal  # 项目名
+  resume: True  # 恢复同名 run（断点续训）
+  mode: online  # online/offline/disabled
+  name: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}  # 运行名称
+  tags: ["${name}", "${task_name}", "${exp_name}"]  # 标签
+  id: null  # 指定 run id（可为空）
+  group: null  # 分组（sweep 或多机时使用）
+
+checkpoint:  # 检查点管理
+  topk:
+    monitor_key: val_loss  # 监控指标（越小越好）
+    mode: min  # 选最小
+    k: 5  # 保留前 K 个最好模型
+    format_str: 'epoch={epoch:04d}-val_loss={val_loss:.4f}.ckpt'  # 文件名格式
+  save_last_ckpt: True  # 总是保存最近一次的 ckpt
+  save_last_snapshot: False  # 是否保存快照（通常体积更大）
+
+multi_run:  # 多次运行输出与命名模板
+  run_dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}  # 输出根目录
+  wandb_name_base: ${now:%Y.%m.%d-%H.%M.%S}_${name}_${task_name}  # W&B 运行基础名
+
+hydra:  # Hydra 的输出目录与命名
+  job:
+    override_dirname: ${name}  # 覆盖目录名为运行名
+  run:
+    dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}  # 单次运行输出目录
+  sweep:
+    dir: data/outputs/${now:%Y.%m.%d}/${now:%H.%M.%S}_${name}_${task_name}  # sweep 根目录
+    subdir: ${hydra.job.num}  # sweep 子目录序号

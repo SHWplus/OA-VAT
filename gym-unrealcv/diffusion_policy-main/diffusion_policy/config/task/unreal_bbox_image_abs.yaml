@@ -1,0 +1,29 @@
+name: unreal_bbox_image
+
+shape_meta: &shape_meta
+  obs:
+    image:
+      shape: [3, 240, 360]
+      type: rgb
+    bbox:
+      shape: [4]
+  action:
+    shape: [3]
+
+# user: set to your zarr path
+zarr_path: &zarr_path /home/ws0/gym-unrealcv/gym-unrealcv/diffusion_policy-main/train_data
+
+env_runner:
+  _target_: diffusion_policy.env_runner.noop_image_runner.NoopImageRunner
+  output_dir: '.'
+
+dataset:
+  _target_: diffusion_policy.dataset.unreal_bbox_image_dataset.UnrealBBoxImageDataset
+  zarr_path: *zarr_path
+  shape_meta: *shape_meta
+  horizon: ${horizon}
+  pad_before: ${eval:'${n_obs_steps}-1+${n_latency_steps}'}
+  pad_after: ${eval:'${n_action_steps}-1'}
+  n_obs_steps: ${dataset_obs_steps}
+  seed: 42
+  val_ratio: 0.02 

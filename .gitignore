@@ -1,0 +1,122 @@
+# ========= Python =========
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+
+# Virtual env
+.venv/
+venv/
+ENV/
+env/
+.env
+.env.*
+
+# Packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Testing / Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# Type checkers / linters cache
+.mypy_cache/
+.pytype/
+.pyre/
+.ruff_cache/
+.cache/
+.pyrightcache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# ========= Project outputs (images/videos/logs) =========
+test_outputs/
+results/
+result/
+img_logs/
+RawStream/
+FollowStream/
+Tracker-ORTrack/
+Detection/
+Detection_YOLO_*/
+Detection_YOLO_BestMatch/
+Detection_YOLO_Default/
+**/example_videos/**
+
+# Video artifacts (only new ones; keep versioned examples if already tracked)
+*.avi
+*.mp4
+*.jpg
+*.jpeg
+*.JPG  # 兼容大写后缀
+
+# ========= Weights / checkpoints / features (global) =========
+**/checkpoints/**
+**/weights/**
+**/queries/**
+**/*.pt
+**/*.pth
+**/*.ckpt
+**/*.onnx
+**/*.tflite
+**/*.bin
+**/*.safetensors
+
+# Local hub/weights mirrors
+hub/*.pth
+hub/**/*.pth
+
+# ========= Node (SAMITE-main) =========
+SAMITE-main/node_modules/
+SAMITE-main/dist/
+SAMITE-main/build/
+*.tsbuildinfo
+
+# ========= Gym-UnrealCV (when merged here) =========
+# DP training/eval runs and trackers
+**/diffusion_policy-main/run_*/
+**/wandb/**
+
+# Explicit ignores for merged Gym-UnrealCV path
+gym-unrealcv/gym-unrealcv/diffusion_policy-main/run_*/
+gym-unrealcv/gym-unrealcv/diffusion_policy-main/wandb/
+
+
+# gym-unrealcv/gym-unrealcv/
+# Stable Diffusion/Pose2ID 模型权重
+Pose2ID/IPG/pretrained/
+sd-vae-ft-mse/
+stable-diffusion-v1-5/
+*.pth
+*.bin
+*.safetensors
+*.ckpt
+
+
+*.sh
+
+gym-unrealcv/gym-unrealcv/diffusion_policy-main/run_10k_55
+gym-unrealcv/gym-unrealcv/diffusion_policy-main/run_10k_91
+gym-unrealcv/gym-unrealcv/diffusion_policy-main/run_20k
+gym-unrealcv/gym-unrealcv/diffusion_policy-main/run_20k_nobbox
+gym-unrealcv/gym-unrealcv/diffusion_policy-main/train_data_vis
+gym-unrealcv/gym-unrealcv/diffusion_policy-main/train_data_vis_garage
+gym-unrealcv/gym-unrealcv/gym_unrealcv/envs/UnrealEnv
+
