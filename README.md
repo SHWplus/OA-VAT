@@ -303,9 +303,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
 
-Citation
-
----
+## 📚 Citation
 
 If you find OA-VAT useful in your research or applications, please cite it using the following BibTeX:
 
