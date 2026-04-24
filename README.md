@@ -1,10 +1,15 @@
 # OA-VAT
 
+[![arXiv](https://img.shields.io/badge/arXiv-2604.21453-b31b1b.svg)](https://arxiv.org/abs/2604.21453)
 [![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3100/)
 [![PyTorch 2.2.2](https://img.shields.io/badge/PyTorch-2.2.2-ee4c2c.svg)](https://pytorch.org/get-started/locally/)
 [![CUDA 12.1](https://img.shields.io/badge/CUDA-12.1-green.svg)](https://developer.nvidia.com/cuda-toolkit)
 
 ---
+
+## 📢 News & Updates
+
+- 🎉 **OA-VAT is accepted by CVPR 2026 as a Poster presentation!**
 
 ## 🛠 Prerequisites
 
@@ -292,20 +297,26 @@ pip install -r requirements.txt
 
 ---
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
 ## 📄 License
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
 ---
+
+Citation
+
+---
+
+If you find OA-VAT useful in your research or applications, please cite it using the following BibTeX:
+
+```bibtex
+  @misc{sun2026instancelevelvisualactivetracking,
+      title={Instance-level Visual Active Tracking with Occlusion-Aware Planning}, 
+      author={Haowei Sun and Kai Zhou and Hao Gao and Shiteng Zhang and Jinwu Hu and Xutao Wen and Qixiang Ye and Mingkui Tan},
+      year={2026},
+      eprint={2604.21453},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2604.21453}, 
+}
+```
